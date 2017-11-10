@@ -1,0 +1,129 @@
+#!/bin/bash
+
+function build_helper () {
+    ANDROID_NDK=${NDK}
+    NATIVE_API_LEVEL=$1
+    case $2 in
+    0)
+        TOOLCHAIN=$ANDROID_NDK/toolchains/aarch64-linux-android-4.9/prebuilt/linux-x86_64
+        TOOLCHAIN_HOST=aarch64-linux-android
+        TARGET_ARCH=arch-arm64
+    ;;
+    1)
+        TOOLCHAIN=$ANDROID_NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64
+        TOOLCHAIN_HOST=arm-linux-androideabi
+        TARGET_ARCH=arch-arm
+    ;;
+    2)
+        TOOLCHAIN=$ANDROID_NDK/toolchains/mips64el-linux-android-4.9/prebuilt/linux-x86_64
+        TOOLCHAIN_HOST=mips64el-linux-android
+        TARGET_ARCH=arch-mips64
+    ;;
+    3)
+        TOOLCHAIN=$ANDROID_NDK/toolchains/mipsel-linux-android-4.9/prebuilt/linux-x86_64
+        TOOLCHAIN_HOST=mipsel-linux-android
+        TARGET_ARCH=arch-mips
+    ;;
+    4)
+        TOOLCHAIN=$ANDROID_NDK/toolchains/x86-4.9/prebuilt/linux-x86_64
+        TOOLCHAIN_HOST=i686-linux-android
+        TARGET_ARCH=arch-x86
+    ;;
+    5)
+        TOOLCHAIN=$ANDROID_NDK/toolchains/x86_64-4.9/prebuilt/linux-x86_64
+        TOOLCHAIN_HOST=x86_64-linux-android
+        TARGET_ARCH=arch-x86_64
+    ;;
+    *)
+        return 1
+    ;;
+    esac 
+    SYSROOT_DIR=${ANDROID_NDK}/platforms/android-${NATIVE_API_LEVEL}/${TARGET_ARCH}
+    __CC="${TOOLCHAIN}/bin/${TOOLCHAIN_HOST}-gcc"
+    __CXX="${TOOLCHAIN}/bin/${TOOLCHAIN_HOST}-g++"
+    __FLAGS="-D__ANDROID_API__=${NATIVE_API_LEVEL}"
+    __R_DIR="android-${NATIVE_API_LEVEL}/${TARGET_ARCH}"
+    if [ ! -d "${SYSROOT_DIR}" ]; then
+        echo "Missing SYSROOT: ${SYSROOT_DIR}"
+        return 1
+    else
+        export SYSROOT_DIR TOOLCHAIN_HOST __FLAGS
+    fi
+}
+
+function bundle0(){
+    PWD0=`pwd`
+    TGT0=$1
+    for api in {26..14}; do
+        for tgt in {0..5}; do
+            build_helper $api $tgt
+            if [ 0 = $? ];then
+                echo "Found SYSROOT: ${SYSROOT_DIR}"
+                TGT=${TGT0}/${__R_DIR}
+                if [ ! -d "${TGT}" ]; then
+                    mkdir -p ${TGT}
+                    if [ ! -d "${TGT}" ]; then
+                        continue
+                    fi
+                    cp -R ${SYSROOT_DIR}/* ${TGT}
+                    if [ ! 0 = $? ];then
+                        continue
+                    fi
+                fi
+                BUILDDIR=$PWD0/H_build/${__R_DIR}
+                mkdir -p ${BUILDDIR}
+                cd ${BUILDDIR}
+                CC="${__CC} --sysroot ${TGT} ${__FLAGS}"
+                CXX="${__CXX} --sysroot ${TGT} ${__FLAGS}"
+                CC=$CC CXX=$CXX $PWD0/configure --host=${TOOLCHAIN_HOST} --prefix=${TGT}/usr $2 $3 $4 $5 $6 $7 $8 $9
+                if [ 0 = $? ];then
+                    make -j8
+                    make install
+                fi
+                cd $PWD0
+            fi
+        done
+    done
+}
+
+function standalone0(){
+    PWD0=`pwd`
+    for api in {26..14}; do
+        for tgt in {0..5}; do
+            build_helper $api $tgt
+            if [ 0 = $? ];then
+                echo "Found SYSROOT: ${SYSROOT_DIR}"
+                PREFIX=$PWD0/H_generate/${__R_DIR}
+                BUILDDIR=$PWD0/H_build/${__R_DIR}
+                mkdir -p ${PREFIX}
+                mkdir -p ${BUILDDIR}
+                cd ${BUILDDIR}
+                CC="${__CC} --sysroot ${SYSROOT_DIR} ${__FLAGS}"
+                CXX="${__CXX} --sysroot ${SYSROOT_DIR} ${__FLAGS}"
+                CC=$CC CXX=$CXX $PWD0/configure --host=${TOOLCHAIN_HOST} --prefix=${PREFIX} $1 $2 $3 $4 $5 $6 $7 $8 $9
+                if [ 0 = $? ];then
+                    make -j8
+                    make install
+                fi
+                cd $PWD0
+            fi
+        done
+    done
+}
+
+### MAIN
+if [ '--sys' = $1 ]; then 
+    bundle0 $(readlink -f $2) $3 $4 $5 $6 $7 $8 $9
+else
+    standalone0 $1 $2 $3 $4 $5 $6 $7 $8 $9
+fi
+exit 0;
+exit 0;
+exit 0;
+exit 0;
+exit 0;
+exit 0;
+exit 0;
+exit 0;
+exit 0;
+exit 0;
