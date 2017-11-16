@@ -1,5 +1,8 @@
 #!/bin/bash
 MAX_TASK_COUNT=8
+PWD0=`pwd`
+NEED_SYSROOT_COPY=0
+
 function build_helper () {
     ANDROID_NDK=${NDK}
     NATIVE_API_LEVEL=$1
@@ -50,65 +53,42 @@ function build_helper () {
         export SYSROOT_DIR TOOLCHAIN_HOST __FLAGS
     fi
 }
-function bundle0(){
-    PWD0=`pwd`
-    TGT0=$1
+function _N_build(){
     for api in {26..14}; do
         for tgt in {0..5}; do
             build_helper $api $tgt
             if [ 0 = $? ];then
                 echo "Found SYSROOT: ${SYSROOT_DIR}"
-                TGT=${TGT0}/${__R_DIR}
-                if [ ! -d "${TGT}" ]; then
-                    mkdir -p ${TGT}
-                    if [ ! -d "${TGT}" ]; then
+                PREFIX="${PREFIX_BASE}/${__R_DIR}"
+                if [ ! -d "${PREFIX}" ]; then
+                    mkdir -p ${PREFIX}
+                    if [ ! -d "${PREFIX}" ]; then
                         continue
                     fi
-                    cp -R ${SYSROOT_DIR}/* ${TGT}
-                    if [ ! 0 = $? ];then
-                        continue
+                    if [ ${NEED_SYSROOT_COPY} = 1 ]; then
+                        cp -R ${SYSROOT_DIR}/* ${PREFIX}
+                        if [ ! 0 = $? ];then
+                            continue
+                        fi
                     fi
+                fi
+                if [ ${NEED_SYSROOT_COPY} = 1 ]; then
+                    SYSROOT_DIR=${PREFIX}
                 fi
                 BUILDDIR=${PWD0}/H_build/${__R_DIR}
                 mkdir -p ${BUILDDIR}
                 cd ${BUILDDIR}
-                _N_CC="${__CC} --sysroot ${TGT} ${__FLAGS}"
-                _N_CXX="${__CXX} --sysroot ${TGT} ${__FLAGS}"
-                CC=${_N_CC} CXX=${_N_CXX} ${PWD0}/configure --host=${TOOLCHAIN_HOST} --prefix=${TGT}/usr $2 $3 $4 $5 $6 $7 $8 $9 && make -j8 && make install &
-                cd ${PWD0}
-                while [ true ] ; do 
-                    task_count=0
-                    for running_task in $(jobs -p);do
-                        ((task_count++))
-                    done
-                    if [ $task_count -lt $MAX_TASK_COUNT ] ; then
-                        break;
-                    fi
-                    sleep 5
-                done
-            fi
-        done
-    done
-    for running_task in $(jobs -p);do
-        wait $running_task
-    done
-}
-
-function standalone0(){
-    PWD0=`pwd`
-    for api in {26..14}; do
-        for tgt in {0..5}; do
-            build_helper $api $tgt
-            if [ 0 = $? ];then
-                echo "Found SYSROOT: ${SYSROOT_DIR}"
-                PREFIX=${PWD0}/H_generate/${__R_DIR}
-                BUILDDIR=${PWD0}/H_build/${__R_DIR}
-                mkdir -p ${PREFIX}
-                mkdir -p ${BUILDDIR}
-                cd ${BUILDDIR}
-                CC="${__CC} --sysroot ${SYSROOT_DIR} ${__FLAGS}"
-                CXX="${__CXX} --sysroot ${SYSROOT_DIR} ${__FLAGS}"
-                CC=$CC CXX=$CXX ${PWD0}/configure --host=${TOOLCHAIN_HOST} --prefix=${PREFIX} $1 $2 $3 $4 $5 $6 $7 $8 $9 && make -j8 && make install &
+                _N_FLAGS="--sysroot ${SYSROOT_DIR}"
+                _N_FLAGS="${_N_FLAGS} ${__FLAGS}"
+                _N_FLAGS="${_N_FLAGS} -I${SYSROOT_DIR}/usr/include"
+                _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib"
+                _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib64"
+                _N_CC="${__CC} ${_N_FLAGS}"
+                _N_CXX="${__CXX} ${_N_FLAGS}"
+                PKG_CONFIG_PATH=${SYSROOT_DIR}/usr/lib/pkgconfig \
+                    CC=${_N_CC} CXX=${_N_CXX} \
+                    ${PWD0}/configure --host=${TOOLCHAIN_HOST} \
+                    --prefix=${PREFIX}/usr "$@" && make -j8 && make install &
                 cd ${PWD0}
                 while [ true ] ; do 
                     task_count=0
@@ -129,18 +109,16 @@ function standalone0(){
 }
 
 ### MAIN
-if [ '--sys' = $1 ]; then 
-    bundle0 $(readlink -f $2) $3 $4 $5 $6 $7 $8 $9
+
+if [ ! 0 = $# ]; then
+    if [ '--sys' = $1 ]; then 
+        PREFIX_BASE="$(readlink -f $2)";
+        NEED_SYSROOT_COPY=1
+        shift 2;
+    fi
 else
-    standalone0 $1 $2 $3 $4 $5 $6 $7 $8 $9
+    PREFIX_BASE="${PWD0}/H_generate";
 fi
-exit 0;
-exit 0;
-exit 0;
-exit 0;
-exit 0;
-exit 0;
-exit 0;
-exit 0;
-exit 0;
+
+_N_build "$@"
 exit 0;
