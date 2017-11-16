@@ -1,7 +1,8 @@
 #!/bin/bash
-MAX_TASK_COUNT=8
-PWD0=`pwd`
-NEED_SYSROOT_COPY=0
+MAX_TASK_COUNT=8;
+PWD0=$(pwd);
+NEED_SYSROOT_COPY=0;
+PREFIX_BASE="${PWD0}/H_generate";
 
 function build_helper () {
     ANDROID_NDK=${NDK}
@@ -110,15 +111,26 @@ function _N_build(){
 
 ### MAIN
 
-if [ ! 0 = $# ]; then
+_N_ARGS='';
+while [ ! 0 = $# ] ; do
     if [ '--sys' = $1 ]; then 
-        PREFIX_BASE="$(readlink -f $2)";
-        NEED_SYSROOT_COPY=1
-        shift 2;
+        shift;
+        if [ ! 0 = $# ]; then
+            echo "$0: Invalid Args!"1>&2;
+            exit 1;
+        fi
+        if [ ! 0 = ${NEED_SYSROOT_COPY} ] ; then
+            echo "$0: Invalid Args!"1>&2;
+            exit 1;
+        fi
+        PREFIX_BASE="$(readlink -f $1)";
+        NEED_SYSROOT_COPY=1;
+        shift;
+    else
+        _N_ARGS="${_N_ARGS} $1";
+        shift;
     fi
-else
-    PREFIX_BASE="${PWD0}/H_generate";
-fi
+done
 
-_N_build "$@"
-exit 0;
+_N_build "${_N_ARGS}";
+exit $?;
