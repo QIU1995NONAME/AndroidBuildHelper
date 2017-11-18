@@ -84,6 +84,9 @@ function _N_build(){
                 _N_FLAGS="${_N_FLAGS} -I${SYSROOT_DIR}/usr/include"
                 _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib"
                 _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib64"
+                _N_FLAGS="${_N_FLAGS} -I${PREFIX}/usr/include"
+                _N_FLAGS="${_N_FLAGS} -L${PREFIX}/usr/lib"
+                _N_FLAGS="${_N_FLAGS} -L${PREFIX}/usr/lib64"
                 _N_CC="${__CC} ${_N_FLAGS}"
                 _N_CXX="${__CXX} ${_N_FLAGS}"
                 PKG_CONFIG_PATH=${SYSROOT_DIR}/usr/lib/pkgconfig \
@@ -110,8 +113,7 @@ function _N_build(){
 }
 
 ### MAIN
-
-_N_ARGS='';
+local -a _N_ARGS=();
 while [ ! 0 = $# ] ; do
     if [ '--sys' = $1 ]; then 
         shift;
@@ -127,10 +129,10 @@ while [ ! 0 = $# ] ; do
         NEED_SYSROOT_COPY=1;
         shift;
     else
-        _N_ARGS="${_N_ARGS} $1";
+        _N_ARGS=("${_N_ARGS[@]}" $1);
         shift;
     fi
 done
 
-_N_build "${_N_ARGS}";
+_N_build "${_N_ARGS[@]}";
 exit $?;
