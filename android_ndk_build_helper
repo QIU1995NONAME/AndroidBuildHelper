@@ -42,10 +42,10 @@ function build_helper () {
         return 1
     ;;
     esac 
-    SYSROOT_DIR=${ANDROID_NDK}/platforms/android-${NATIVE_API_LEVEL}/${TARGET_ARCH}
+    SYSROOT_DIR="${ANDROID_NDK}/platforms/android-${NATIVE_API_LEVEL}/${TARGET_ARCH}"
     __CC="${TOOLCHAIN}/bin/${TOOLCHAIN_HOST}-gcc"
     __CXX="${TOOLCHAIN}/bin/${TOOLCHAIN_HOST}-g++"
-    __FLAGS="-D__ANDROID_API__=${NATIVE_API_LEVEL}"
+    __FLAGS="-D__ANDROID_API__=${NATIVE_API_LEVEL} -I${ANDROID_NDK}/sysroot/usr/include/${TOOLCHAIN_HOST}"
     __R_DIR="android-${NATIVE_API_LEVEL}/${TARGET_ARCH}"
     if [ ! -d "${SYSROOT_DIR}" ]; then
         echo "Missing SYSROOT: ${SYSROOT_DIR}"
@@ -55,7 +55,7 @@ function build_helper () {
     fi
 }
 function _N_build(){
-    for api in {26..14}; do
+    for api in {32..14}; do
         for tgt in {0..5}; do
             build_helper $api $tgt
             if [ 0 = $? ];then
@@ -84,9 +84,6 @@ function _N_build(){
                 _N_FLAGS="${_N_FLAGS} -I${SYSROOT_DIR}/usr/include"
                 _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib"
                 _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib64"
-                _N_FLAGS="${_N_FLAGS} -I${PREFIX}/usr/include"
-                _N_FLAGS="${_N_FLAGS} -L${PREFIX}/usr/lib"
-                _N_FLAGS="${_N_FLAGS} -L${PREFIX}/usr/lib64"
                 _N_CC="${__CC} ${_N_FLAGS}"
                 _N_CXX="${__CXX} ${_N_FLAGS}"
                 PKG_CONFIG_PATH=${SYSROOT_DIR}/usr/lib/pkgconfig \
@@ -112,27 +109,28 @@ function _N_build(){
     done
 }
 
-### MAIN
-local -a _N_ARGS=();
-while [ ! 0 = $# ] ; do
-    if [ '--sys' = $1 ]; then 
-        shift;
-        if [ ! 0 = $# ]; then
-            echo "$0: Invalid Args!"1>&2;
-            exit 1;
+function _N_main(){
+    local -a _N_ARGS=();
+    while [ ! 0 = $# ] ; do
+        if [ '--sys' = $1 ]; then 
+            shift;
+            if [ 0 = $# ]; then
+                echo "$0: Invalid Arg Counts!" 1>&2;
+                exit 1;
+            fi
+            if [ ! 0 = ${NEED_SYSROOT_COPY} ] ; then
+                echo "$0: Invalid Args!" 1>&2;
+                exit 1;
+            fi
+            PREFIX_BASE="$(readlink -f $1)";
+            NEED_SYSROOT_COPY=1;
+            shift;
+        else
+            _N_ARGS=("${_N_ARGS[@]}" $1);
+            shift;
         fi
-        if [ ! 0 = ${NEED_SYSROOT_COPY} ] ; then
-            echo "$0: Invalid Args!"1>&2;
-            exit 1;
-        fi
-        PREFIX_BASE="$(readlink -f $1)";
-        NEED_SYSROOT_COPY=1;
-        shift;
-    else
-        _N_ARGS=("${_N_ARGS[@]}" $1);
-        shift;
-    fi
-done
-
-_N_build "${_N_ARGS[@]}";
+    done
+    _N_build "${_N_ARGS[@]}";
+}
+_N_main "$@"
 exit $?;
