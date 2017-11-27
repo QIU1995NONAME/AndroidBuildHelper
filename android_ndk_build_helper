@@ -5,7 +5,7 @@ NEED_SYSROOT_COPY=0;
 PREFIX_BASE="${PWD0}/H_generate";
 
 function build_helper () {
-    ANDROID_NDK=${NDK}
+    ANDROID_NDK=${ANDROID_NDK_HOME}
     NATIVE_API_LEVEL=$1
     case $2 in
     0)
@@ -45,7 +45,7 @@ function build_helper () {
     SYSROOT_DIR="${ANDROID_NDK}/platforms/android-${NATIVE_API_LEVEL}/${TARGET_ARCH}"
     __CC="${TOOLCHAIN}/bin/${TOOLCHAIN_HOST}-gcc"
     __CXX="${TOOLCHAIN}/bin/${TOOLCHAIN_HOST}-g++"
-    __FLAGS="-D__ANDROID_API__=${NATIVE_API_LEVEL} -I${ANDROID_NDK}/sysroot/usr/include/${TOOLCHAIN_HOST}"
+    __FLAGS="-D__ANDROID_API__=${NATIVE_API_LEVEL}"
     __R_DIR="android-${NATIVE_API_LEVEL}/${TARGET_ARCH}"
     if [ ! -d "${SYSROOT_DIR}" ]; then
         echo "Missing SYSROOT: ${SYSROOT_DIR}"
