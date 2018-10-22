@@ -71,6 +71,8 @@ function _N_build(){
                 cd ${BUILDDIR}
                 _N_FLAGS="--sysroot ${SYSROOT_DIR}"
                 _N_FLAGS="${_N_FLAGS} ${__FLAGS}"
+                _N_FLAGS="${_N_FLAGS} -isystem ${ANDROID_NDK}/sysroot/usr/include/${TOOLCHAIN_HOST}"
+                _N_FLAGS="${_N_FLAGS} -isystem ${ANDROID_NDK}/sysroot/usr/include"
                 _N_FLAGS="${_N_FLAGS} -I${SYSROOT_DIR}/usr/include"
                 _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib"
                 _N_FLAGS="${_N_FLAGS} -L${SYSROOT_DIR}/usr/lib64"
